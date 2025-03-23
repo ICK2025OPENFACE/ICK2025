@@ -44,7 +44,7 @@ def view_last_gesture():
 
 # saving the recognition restult to array for sequential gestures
 def save_result(
-    result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int
+    result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int # type: ignore
 ):
     global gestures
     global last_gesture
