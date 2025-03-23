@@ -3,7 +3,7 @@ import mediapipe as mp
 import cv2
 
 gestures = []
-
+# https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer/index#models
 model_path = "gesture_recognizer.task"
 BaseOptions = mp.tasks.BaseOptions
 GestureRecognizer = mp.tasks.vision.GestureRecognizer
