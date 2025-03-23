@@ -18,6 +18,24 @@ GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 
+def recognize_custom_gesture(landmarks):
+    try:
+        dist_thumb_n_pointing = (
+            abs(landmarks[4].y - landmarks[8].y) < 0.05
+            and abs(landmarks[4].x - landmarks[8].x) < 0.05
+        )
+        dist_rest = (
+            abs(landmarks[12].y < landmarks[10].y)
+            and abs(landmarks[16].y < landmarks[14].y)
+            and abs(landmarks[20].y < landmarks[18].y)
+        )
+        if dist_thumb_n_pointing and dist_rest:
+            return "OK!"
+    except:
+        pass
+    return None
+
+
 # printing last gesture
 def view_last_gesture():
     global last_gesture
@@ -31,10 +49,15 @@ def save_result(
     global gestures
     global last_gesture
     try:
-        gesture = result.gestures[0][0].category_name
-        last_gesture = gesture
-        if gesture and gesture != "None":
-            gestures.append(gesture)
+        last_gesture = result.gestures[0][0].category_name
+        if last_gesture and last_gesture != "None":
+            gestures.append(last_gesture)
+        else:
+            landmarks = result.hand_landmarks[0]
+            last_gesture = recognize_custom_gesture(landmarks)
+            if last_gesture:
+                last_gesture = last_gesture
+                gestures.append(last_gesture)
     except:
         last_gesture = None
 
