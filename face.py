@@ -1,15 +1,16 @@
-import time
 import mediapipe as mp
 import cv2
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 import numpy as np
+import asyncio
+import websockets
 
 # Initializing the array for the gestures
+SHOW_CAMERA = False
+MAX_EXPRESSION_ARRAY_LENGTH = 10
 expressions = []
 last_expression = None
-MAX_EXPRESSION_ARRAY_LENGTH = 10
-
 detection_result = None
 
 # https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/index#models
@@ -42,7 +43,11 @@ def check_eyes_closed(face_landmarks):
 def recognize_custom_expression(face_landmarks):
     left_eye_closed, right_eye_closed = check_eyes_closed(face_landmarks)
     if left_eye_closed and right_eye_closed:
-        return "Eyes_closed"
+        return "EYES_CLOSED"
+    elif left_eye_closed and not right_eye_closed:
+        return "LEFT_EYE_CLOSED"
+    elif right_eye_closed and not left_eye_closed:
+        return "RIGHT_EYE_CLOSED"
 
     return None
 
@@ -102,7 +107,9 @@ def save_result(
     global detection_result, last_expression, expressions
     detection_result = result
     try:
-        last_expression = recognize_custom_expression(detection_result.face_landmarks[0])
+        last_expression = recognize_custom_expression(
+            detection_result.face_landmarks[0]
+        )
         if last_expression and last_expression != "None":
             expressions.append(last_expression)
     except:
@@ -112,8 +119,18 @@ def save_result(
         expressions.pop(0)
 
 
-if __name__ == "__main__":
+async def send_messages(websocket):
+    print("Client connected")
+    try:
+        while True:
+            await websocket.send(f"{last_expression}")
+            await asyncio.sleep(0.05)
+    except websockets.ConnectionClosed:
+        print("Client disconnected")
 
+
+async def camera_proc():
+    global detection_result
     cam = cv2.VideoCapture(0)
     options = FaceLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=model_path),
@@ -121,12 +138,7 @@ if __name__ == "__main__":
         result_callback=save_result,
     )
 
-    show_camera = True
-
     with FaceLandmarker.create_from_options(options) as landmarker:
-        last_recognition_time = 0
-        recognition_interval = 0.1
-
         while True:
             try:
                 ret, frame = cam.read()
@@ -137,24 +149,37 @@ if __name__ == "__main__":
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
-                current_time = time.time()
-                if current_time - last_recognition_time >= recognition_interval:
-                    landmarker.detect_async(
-                        mp_image,
-                        int(cv2.getTickCount() / cv2.getTickFrequency() * 1000),
-                    )
-                    last_recognition_time = current_time
-                    view_last_expression()
+                landmarker.detect_async(
+                    mp_image,
+                    int(cv2.getTickCount() / cv2.getTickFrequency() * 1000),
+                )
 
-                if show_camera:
+                # Uncomment this line for verification if the camera detects signal:
+                # view_last_expression()
+
+                if SHOW_CAMERA:
                     cv2.imshow(
                         "Camera", draw_landmarks_on_image(frame, detection_result)
                     )
                     if cv2.waitKey(1) == ord("q"):
                         break
 
+                await asyncio.sleep(0.05)
+
             except Exception as e:
                 print(f"Unhandled exception: {e}")
+
         cam.release()
-        if show_camera:
+
+        if SHOW_CAMERA:
             cv2.destroyAllWindows()
+
+
+async def main():
+    server = await websockets.serve(send_messages, "localhost", 8765)
+    print("Server WebSocket ws://localhost:8765")
+    await asyncio.gather(camera_proc(), asyncio.Future())
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
