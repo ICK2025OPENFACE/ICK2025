@@ -22,7 +22,7 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 
 def camera_callback(
     result: FaceLandmarkerResult, output_image: mp.Image, timestamp_ms: int  # type: ignore
-):
+) -> None:
     """
     Function is a callback for mediapipe FaceLandmarker model.
     It calls functions from faceexpressions.py that returns information
@@ -64,6 +64,12 @@ def camera_proc():
     """
     Main script function that will be called when
     merging solutions with other modalities and a game.
+
+    @params:
+        None
+
+    @output:
+        None
     """
 
     # grabbing the camera output
