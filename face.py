@@ -1,15 +1,16 @@
 import mediapipe as mp
 import cv2
-import asyncio
-import websockets
+import socket
 import faceexpressions as fe
 import support_functions as sf
 
-# Initializing the array for the gestures
+# Networking setup for UDP
+server_ip = "127.0.0.1"
+server_port = 4242
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Additional visualization parameter
 SHOW_CAMERA = True
-MAX_EXPRESSION_ARRAY_LENGTH = 10
-expressions = []
-last_expression = None
 detection_result = None
 
 # https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/index#models
@@ -21,41 +22,28 @@ FaceLandmarkerResult = mp.tasks.vision.FaceLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 
-# TODO usunąć funkcję zapisu "ostatnich ekspresji" i aktulanej ekspresji,
-# zamiast tego przesyłać info zgodne z tableką na teams
-def save_result(
+def camera_callback(
     result: FaceLandmarkerResult, output_image: mp.Image, timestamp_ms: int  # type: ignore
 ):
-    global detection_result, last_expression, expressions
-    detection_result = result
+    if SHOW_CAMERA:
+        global detection_result
+        detection_result = result
     try:
-        last_expression = fe.eyes_expression(detection_result.face_landmarks[0])
-        if last_expression and last_expression != "None":
-            expressions.append(last_expression)
-    except:
-        last_expression = None
+        test_expression = fe.eyes_expression(result.face_landmarks[0])
+        if not test_expression is None:
+            msg = str(test_expression)
+            udp_socket.sendto(msg.encode("ascii"), (server_ip, server_port))
 
-    if len(expressions) > MAX_EXPRESSION_ARRAY_LENGTH:
-        expressions.pop(0)
-
-
-async def send_messages(websocket):
-    print("Client connected")
-    try:
-        while True:
-            await websocket.send(f"{last_expression}")
-            await asyncio.sleep(0.05)
-    except websockets.ConnectionClosed:
-        print("Client disconnected")
+    except Exception as e:
+        print(e)
 
 
-async def camera_proc():
-    global detection_result
+def camera_proc():
     cam = cv2.VideoCapture(0)
     options = FaceLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=model_path),
         running_mode=VisionRunningMode.LIVE_STREAM,
-        result_callback=save_result,
+        result_callback=camera_callback,
     )
 
     with FaceLandmarker.create_from_options(options) as landmarker:
@@ -81,8 +69,6 @@ async def camera_proc():
                     if cv2.waitKey(1) == ord("q"):
                         break
 
-                await asyncio.sleep(0.05)
-
             except Exception as e:
                 print(f"Unhandled exception: {e}")
 
@@ -92,11 +78,5 @@ async def camera_proc():
             cv2.destroyAllWindows()
 
 
-async def main():
-    server = await websockets.serve(send_messages, "localhost", 8765)
-    print("Server WebSocket ws://localhost:8765")
-    await asyncio.gather(camera_proc(), asyncio.Future())
-
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    camera_proc()

@@ -43,25 +43,25 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool]:
     return is_left_eye_closed, is_right_eye_closed
 
 
-def eyes_expression(landmarks: List[NormalizedLandmark]) -> Union[None, str]:
+def eyes_expression(landmarks: List[NormalizedLandmark]) -> Union[None, int]:
     """
-    Function returns the string natural language value that determine which eye is closed:
-    'LEFT_EYE_CLOSED' - when only left eye is closed;
-    'RIGHT_EYE_CLOSED' - when only right eye is closed;
-    'EYES_CLOSED' - when both eyes are closed;
+    Function returns the int value that determine which eye is closed:
+    30 - 'LEFT_EYE_CLOSED' - when only left eye is closed;
+    31 - 'RIGHT_EYE_CLOSED' - when only right eye is closed;
+    32 - 'EYES_CLOSED' - when both eyes are closed;
     None - when eyes are opened.
     @params:
         landmarks: List[NormalizedLandmark] - given list of face landmarks points.
 
      @output:
-        string value None/EYES_CLOSED/LEFT_EYE_CLOSED/RIGHT_EYE_CLOSED.
+        int value None/0/1/2
     """
     left_eye_closed, right_eye_closed = check_eyes_closed(landmarks)
     if left_eye_closed and right_eye_closed:
-        return "EYES_CLOSED"
+        return 0  # "EYES_CLOSED"
     elif left_eye_closed and not right_eye_closed:
-        return "LEFT_EYE_CLOSED"
+        return 1  # "LEFT_EYE_CLOSED"
     elif right_eye_closed and not left_eye_closed:
-        return "RIGHT_EYE_CLOSED"
+        return 2  # "RIGHT_EYE_CLOSED"
 
     return None
