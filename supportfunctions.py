@@ -2,6 +2,8 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe import solutions
 import mediapipe as mp
 import numpy as np
+import socket
+
 
 def draw_landmarks_on_image(rgb_image, detection_result):
     face_landmarks_list = detection_result.face_landmarks
@@ -45,3 +47,21 @@ def draw_landmarks_on_image(rgb_image, detection_result):
         )
 
     return annotated_image
+
+
+def send_msg_via_udp(msg: str, server_ip: str, server_port: str) -> None:
+    try:
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    except:
+        print("Couldn't create udp socket")
+    else:
+        try:
+            if not msg is None:
+                msg = str(msg)
+                udp_socket.sendto(msg.encode("ascii"), (server_ip, server_port))
+        except Exception as e:
+            print(
+                f"Unhandled exception in supportfunctions.send_msg_via_udp function: {e}"
+            )
+        finally:
+            udp_socket.close()

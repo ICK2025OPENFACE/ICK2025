@@ -2,12 +2,11 @@ import mediapipe as mp
 import cv2
 import socket
 import faceexpressions as fe
-import support_functions as sf
+import supportfunctions as sf
 
 # Networking setup for UDP
 server_ip = "127.0.0.1"
 server_port = 4242
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Additional visualization parameter
 SHOW_CAMERA = True
@@ -25,17 +24,30 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 def camera_callback(
     result: FaceLandmarkerResult, output_image: mp.Image, timestamp_ms: int  # type: ignore
 ):
-    if SHOW_CAMERA:
-        global detection_result
-        detection_result = result
-    try:
-        test_expression = fe.eyes_expression(result.face_landmarks[0])
-        if not test_expression is None:
-            msg = str(test_expression)
-            udp_socket.sendto(msg.encode("ascii"), (server_ip, server_port))
+    """
+    Function is a callback for mediapipe FaceLandmarker model.
+    It calls functions from faceexpressions.py that returns information
+    about current signals detected from user face and send it to game udp server.
+    @params:
+        result: FaceLandmarkerResult - is a result of model face landmarks detection.
+        It contains object with property face_landmarks that contains list of NormalizedLandmark
+        which are used for further proceeding and signal generations.
+        output_image: mp.Image - is a default parameter that needs to be passed for FaceLandmarkerResult work.
+        timestamp_ms:int - is a default parameter that needs to be passed for FaceLandmarkerResult work.
 
+    @output:
+        None
+    """
+    global detection_result
+    if SHOW_CAMERA:
+        detection_result = result
+
+    try:
+        if result.face_landmarks and len(result.face_landmarks) > 0:
+            test_expression = fe.eyes_expression(result.face_landmarks[0])
+            sf.send_msg_via_udp(test_expression, server_ip, server_port)
     except Exception as e:
-        print(e)
+        print(f"Unhandled exception in camera_callback function: {e}")
 
 
 def camera_proc():
