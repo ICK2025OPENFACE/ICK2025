@@ -1,0 +1,11 @@
+{
+    "SERVER_IP": "127.0.0.1",
+    "SERVER_PORT": 4242,
+    "SHOW_CAMERA": 0,
+    "GROUP_ID": 0,
+    "LEFT_EYE_CLOSED": 1,
+    "RIGHT_EYE_CLOSED": 2,
+    "BOTH_EYES_CLOSED": 3,
+    "MOUTH_OPENED": 4,
+    "SMILE": 5
+}

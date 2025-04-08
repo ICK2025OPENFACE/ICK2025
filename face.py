@@ -2,13 +2,20 @@ import mediapipe as mp
 import cv2
 import faceexpressions as fe
 import supportfunctions as sf
+import time
+import json
+
+# Reading settings
+with open("face_config.json", "r") as file:
+    face_config = json.load(file)
 
 # Networking setup for UDP
-server_ip = "127.0.0.1"
-server_port = 4242
+SERVER_IP = face_config["SERVER_IP"]
+SERVER_PORT = face_config["SERVER_PORT"]
+GROUP_ID = face_config["GROUP_ID"]
 
 # Additional visualization parameter
-SHOW_CAMERA = False
+SHOW_CAMERA = face_config["SHOW_CAMERA"]
 detection_result = None
 
 # https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/index#models
@@ -50,11 +57,33 @@ def camera_callback(
         # if no face landmarks detected do not pass it to the function to avoid exiting app
         if result.face_landmarks and len(result.face_landmarks) > 0:
 
-            # receiving int value about eyes test signal
-            test_expression = fe.eyes_expression(result.face_landmarks[0])
+            # receiving bool value about eyes test signal
+            test_left_eye, test_right_eye = fe.check_eyes_closed(
+                result.face_landmarks[0]
+            )
+            msg = f"({GROUP_ID})({time.time()})"
+            if test_right_eye and test_left_eye:
+                msg += f"{face_config["BOTH_EYES_CLOSED"]}"
+            elif test_left_eye:
+                msg += f"{face_config["LEFT_EYE_CLOSED"]}"
+            elif test_right_eye:
+                msg += f"{face_config["RIGHT_EYE_CLOSED"]}"
+            else:
+                msg = None  # None - msg won't be send due to send_msg_via_udp implementation
 
             # sending a int value to game server to handle corresponding signal
-            sf.send_msg_via_udp(test_expression, server_ip, server_port)
+            sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+
+            # receiving bool value about mouth
+            opened_mouth, smile = fe.detect_smile_and_open_mouth(
+                result.face_landmarks[0]
+            )
+            if opened_mouth:
+                msg = f"({GROUP_ID})({time.time()})({face_config["MOUTH_OPENED"]})"
+                sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+            if smile:
+                msg = f"({GROUP_ID})({time.time()})({face_config["SMILE"]})"
+                sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
 
     except Exception as e:
         print(f"Unhandled exception in camera_callback function: {e}")
