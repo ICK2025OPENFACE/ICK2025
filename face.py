@@ -30,18 +30,20 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 def camera_callback(
     result: FaceLandmarkerResult, output_image: mp.Image, timestamp_ms: int  # type: ignore
 ) -> None:
+    
     """
-    Function is a callback for mediapipe FaceLandmarker model.
-    It calls functions from faceexpressions.py that returns information
-    about current signals detected from user face and send it to game udp server.
-    @params:
-        result: FaceLandmarkerResult - is a result of model face landmarks detection.
-        It contains object with property face_landmarks that contains list of NormalizedLandmark
-        which are used for further proceeding and signal generations.
-        output_image: mp.Image - is a default parameter that needs to be passed for FaceLandmarkerResult work.
-        timestamp_ms:int - is a default parameter that needs to be passed for FaceLandmarkerResult work.
+    Callback function for the MediaPipe FaceLandmarker model.
+    This function processes the detected face landmarks, analyzes facial expressions,
+    and sends corresponding signals to a game server via UDP.
 
-    @output:
+    Args:
+        result (FaceLandmarkerResult): The result of the face landmarks detection.
+            Contains a property `face_landmarks` which is a list of `NormalizedLandmark`
+            objects used for further processing and signal generation.
+        output_image (mp.Image): A default parameter required for FaceLandmarkerResult processing.
+        timestamp_ms (int): A default parameter required for FaceLandmarkerResult processing.
+
+    Returns:
         None
     """
 
@@ -90,14 +92,16 @@ def camera_callback(
 
 
 def camera_proc():
+    
     """
-    Main script function that will be called when
-    merging solutions with other modalities and a game.
+    Main script function that initializes the camera processing pipeline.
+    This function sets up the camera feed, configures the FaceLandmarker model,
+    and processes the video stream to detect and analyze facial expressions.
 
-    @params:
+    Args:
         None
 
-    @output:
+    Returns:
         None
     """
 
