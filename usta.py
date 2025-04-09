@@ -1,68 +1,116 @@
-import cv2
-import mediapipe as mp
 import math
+from typing import List, Dict, Tuple, Union
+from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
 
-# Funkcja obliczająca odległość między dwoma punktami
-def distance(p1, p2):
-    return math.hypot(p1.x - p2.x, p1.y - p2.y)
 
-def detect_smile_and_open_mouth(frame):
-    mp_face_mesh = mp.solutions.face_mesh
-    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
+def is_eye_closed(
+    landmarks: List[NormalizedLandmark], eye_indices: Dict[str, int]
+) -> bool:
+    """
+    Determines if an eye is closed based on the distance between the upper and lower eyelids,
+    normalized by the size of the face.
 
-    # Próg otwartych ust i uśmiechu
-    THRESHOLD_OPEN = 0.05  
-    THRESHOLD_SMILE_RATIO = 0.40  
-    
-    
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(rgb)
+    Args:
+        landmarks (List[NormalizedLandmark]): A list of normalized facial landmarks.
+        eye_indices (Dict[str, int]): A dictionary with keys 'upper' and 'lower', representing
+            the indices of the upper and lower eyelid landmarks.
 
-    if results.multi_face_landmarks:
-        
-        face_landmarks = results.multi_face_landmarks[0]
+    Returns:
+        bool: True if the eye is closed, False otherwise.
 
-        
-        top_lip = face_landmarks.landmark[13]
-        bottom_lip = face_landmarks.landmark[14]
-        left_mouth = face_landmarks.landmark[61]
-        right_mouth = face_landmarks.landmark[291]
-        
-        # Punkty dla szerokości twarzy (skronie) wykorzystane do skalowania odległości
-        left_cheek = face_landmarks.landmark[234]
-        right_cheek = face_landmarks.landmark[454]
+    Notes:
+        - The function calculates the vertical distance between the upper and lower eyelids.
+        - The distance is normalized by the face height to account for variations in face size.
+        - A threshold is used to determine if the eye is closed.
+    """
+    upper_lid = landmarks[eye_indices["upper"]]
+    lower_lid = landmarks[eye_indices["lower"]]
 
-        # Obliczanie odległości
-        open_dist = distance(top_lip, bottom_lip)  # Otwarte usta (odległość pionowa)
-        face_width = distance(left_cheek, right_cheek)  # Szerokość twarzy
-        mouth_width = distance(left_mouth, right_mouth)  # Szerokość ust
+    # Points for face height (chin and forehead) used for scaling distances
+    chin = landmarks[152]
+    forehead = landmarks[10]
 
-        
-        smile_ratio = mouth_width / face_width  # Proporcja szerokości ust do szerokości twarzy
+    # Calculate face height
+    face_height = abs(chin.y - forehead.y)
 
-        # Detekcja: Usta otwarte i uśmiech
-        usta_otwarte = open_dist > THRESHOLD_OPEN  
-        usmiech = smile_ratio > THRESHOLD_SMILE_RATIO  
+    # Calculate normalized vertical distance between eyelids
+    vertical_distance = abs(upper_lid.y - lower_lid.y) / face_height
 
-        
-        return usta_otwarte, usmiech
-    
-    return False, False
+    # Threshold for determining if the eye is closed
+    THRESHOLD_EYE_CLOSED = 0.05
 
-# Przykładowe użycie w głównym programie
-cap = cv2.VideoCapture(0)
+    return vertical_distance < THRESHOLD_EYE_CLOSED
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
 
-    usta_otwarte, usmiech = detect_smile_and_open_mouth(frame)
+def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool]:
+    """
+    Determines if the left and right eyes are closed based on facial landmarks.
 
-    print(f'Usta otwarte: {usta_otwarte} | Uśmiech: {usmiech}')
+    Args:
+        landmarks (List[NormalizedLandmark]): A list of normalized facial landmarks.
 
-    if cv2.waitKey(1) & 0xFF == 27:
-        break
+    Returns:
+        Tuple[bool, bool]: A tuple containing two boolean values:
+            - The first value indicates if the left eye is closed (True if closed, False otherwise).
+            - The second value indicates if the right eye is closed (True if closed, False otherwise).
 
-cap.release()
-cv2.destroyAllWindows()
+    Notes:
+        - The function uses specific landmark indices for the left and right eyes.
+        - The `is_eye_closed` function is called for each eye.
+    """
+    left_eye_indices = {"upper": 159, "lower": 145}
+    right_eye_indices = {"upper": 386, "lower": 374}
+
+    is_left_eye_closed = is_eye_closed(landmarks, left_eye_indices)
+    is_right_eye_closed = is_eye_closed(landmarks, right_eye_indices)
+
+    return is_left_eye_closed, is_right_eye_closed
+
+
+def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bool]:
+    """
+    Detects whether the mouth is open and whether the person is smiling based on facial landmarks.
+    Args:
+        landmarks (List[NormalizedLandmark]): A list of normalized facial landmarks, where each landmark
+            contains x and y coordinates. The landmarks should include specific points for the lips,
+            mouth corners, and cheeks.
+    Returns:
+        Tuple[bool]: A tuple containing two boolean values:
+            - The first value indicates if the mouth is open (True if open, False otherwise).
+            - The second value indicates if the person is smiling (True if smiling, False otherwise).
+    Notes:
+        - The function calculates the vertical distance between the top and bottom lips to determine
+          if the mouth is open.
+        - The smile detection is based on the ratio of the mouth width to the face width.
+        - Thresholds for detecting an open mouth and a smile are defined as constants:
+            - `THRESHOLD_OPEN`: Minimum vertical distance between lips to consider the mouth open.
+            - `THRESHOLD_SMILE_RATIO`: Minimum ratio of mouth width to face width to consider a smile.
+    """
+    # Distance lambda calculation
+    distance = lambda p1, p2: math.hypot(p1.x - p2.x, p1.y - p2.y)
+
+    # Open mouth and smile thresholds
+    THRESHOLD_OPEN = 0.05
+    THRESHOLD_SMILE_RATIO = 0.40
+
+    top_lip = landmarks[12]
+    bottom_lip = landmarks[14]
+    left_mouth = landmarks[307]
+    right_mouth = landmarks[307]
+
+    # Points for face width (temples) used for scaling distances
+    left_cheek = landmarks[265]
+    right_cheek = landmarks[143]
+
+    # Calculating distances
+    open_dist = distance(top_lip, bottom_lip)  # Open mouth (vertical distance)
+    face_width = distance(left_cheek, right_cheek)  # Face width
+    mouth_width = distance(left_mouth, right_mouth)  # Mouth width
+
+    smile_ratio = mouth_width / face_width  # Ratio of mouth width to face width
+
+    # Detection: Open mouth and smile
+    mouth_open = open_dist > THRESHOLD_OPEN
+    smile = smile_ratio > THRESHOLD_SMILE_RATIO
+
+    return mouth_open, smile
