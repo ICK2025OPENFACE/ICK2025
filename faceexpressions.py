@@ -93,14 +93,14 @@ def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bo
     THRESHOLD_OPEN = 0.05
     THRESHOLD_SMILE_RATIO = 0.40
 
-    top_lip = landmarks[13]
+   top_lip = landmarks[12]
     bottom_lip = landmarks[14]
-    left_mouth = landmarks[61]
-    right_mouth = landmarks[291]
+    left_mouth = landmarks[307]
+    right_mouth = landmarks[77]
 
     # Points for face width (temples) used for scaling distances
-    left_cheek = landmarks[234]
-    right_cheek = landmarks[454]
+    left_cheek = landmarks[265]
+    right_cheek = landmarks[143]
 
     # Calculating distances
     open_dist = distance(top_lip, bottom_lip)  # Open mouth (vertical distance)
