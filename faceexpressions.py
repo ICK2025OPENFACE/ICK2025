@@ -114,3 +114,47 @@ def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bo
     smile = smile_ratio > THRESHOLD_SMILE_RATIO
 
     return mouth_open, smile
+
+
+def detect_head_movement(landmarks, center=None):
+    """
+    Detects head movment by checking if the center of the head moves outside of a box.
+
+    Args:
+        landmarks (list): List of normalised landmarks. 
+        center (tuple or None): Central position (x, y).
+
+    Returns:
+        tuple: (is_left, is_right, is_up, is_down)
+    """
+
+    # Center of the face
+    face_x = sum([landmark.x for landmark in landmarks]) / len(landmarks)
+    face_y = sum([landmark.y for landmark in landmarks]) / len(landmarks)
+
+    # Width of the face
+    left_face_x = landmarks[234].x
+    right_face_x = landmarks[454].x
+    face_width = abs(right_face_x - left_face_x)
+
+    if center is None:
+        center = (face_x, face_y)
+
+    center_x, center_y = center
+
+    margin_x = face_width * 0.5
+    margin_y = face_width * 0.5
+
+    # Box boundries 
+    left_bound = center_x - margin_x
+    right_bound = center_x + margin_x
+    top_bound = center_y - margin_y
+    bottom_bound = center_y + margin_y
+
+    # Movment detecion
+    is_left = face_x < left_bound
+    is_right = face_x > right_bound
+    is_up = face_y < top_bound
+    is_down = face_y > bottom_bound
+
+    return (is_left, is_right, is_up, is_down), center
