@@ -13,7 +13,7 @@ else:
         face_config = json.load(file)
         CLOSED_TIME = face_config["CLOSED_EYES_TIME"]
 
-CLOSED_TRESH = 0.1  # maximal tolerable eye gap
+CLOSED_THRESH = 0.1  # maximal tolerable eye gap
 BUF_SIZE = 10
 MAX_BLINK_DURATION = 0.5  # [s]
 
@@ -119,7 +119,7 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
     activate = False
 
     # Eyes currently closed
-    if avg_left < CLOSED_TRESH and avg_right < CLOSED_TRESH:
+    if avg_left < CLOSED_THRESH and avg_right < CLOSED_THRESH:
         if not check_eyes_closed.in_closed:
             # Eyes just closed — start timing
             check_eyes_closed.in_closed = True
@@ -212,10 +212,10 @@ def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bo
 
 def detect_head_movement(landmarks, center=None):
     """
-    Detects head movment by checking if the center of the head moves outside of a box.
+    Detects head movement by checking if the center of the head moves outside of a box.
 
     Args:
-        landmarks (list): List of normalised landmarks.
+        landmarks (list): List of normalized landmarks.
         center (tuple or None): Central position (x, y).
 
     Returns:
@@ -239,13 +239,13 @@ def detect_head_movement(landmarks, center=None):
     margin_x = face_width * 0.5
     margin_y = face_width * 0.5
 
-    # Box boundries
+    # Box boundaries
     left_bound = center_x - margin_x
     right_bound = center_x + margin_x
     top_bound = center_y - margin_y
     bottom_bound = center_y + margin_y
 
-    # Movment detecion
+    # Movement detection
     is_left = face_x < left_bound
     is_right = face_x > right_bound
     is_up = face_y < top_bound
