@@ -125,7 +125,7 @@ def detect_head_movement(landmarks, center=None):
         center (tuple or None): Central position (x, y).
 
     Returns:
-        tuple: (is_left, is_right, is_up, is_down)
+        tuple: (is_left, is_right, is_up, is_down), center
     """
 
     # Center of the face
