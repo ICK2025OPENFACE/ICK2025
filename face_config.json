@@ -4,6 +4,7 @@
     "SHOW_CAMERA": 1,
     "GROUP_ID": 0,
     "BOOLEAN_MSG": 1,
+    "CLOSED_EYES_TIME": 0.5,
     "EYE_CHARGING": 1,
     "EYE_FAILED": 2,
     "EYE_ACTIVATION": 3,

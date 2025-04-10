@@ -2,11 +2,21 @@ import math
 from typing import List, Dict, Tuple, Union
 from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
 import time
+import os
+import json
 
-CLOSED_TRESH = 0.1 # maximal tolerable eye gap
+if not os.path.isfile("face_config.json"):
+    print("Missing config file, download face_config.json before running")
+    quit()
+else:
+    with open("face_config.json", "r") as file:
+        face_config = json.load(file)
+        CLOSED_TIME = face_config["CLOSED_EYES_TIME"]
+
+CLOSED_TRESH = 0.1  # maximal tolerable eye gap
 BUF_SIZE = 10
-CLOSED_TIME = 3 #[s]
-MAX_BLINK_DURATION = 0.5 #[s]
+MAX_BLINK_DURATION = 0.5  # [s]
+
 
 def euclideanDistance(pointA: NormalizedLandmark, pointB: NormalizedLandmark) -> float:
     """
@@ -20,11 +30,13 @@ def euclideanDistance(pointA: NormalizedLandmark, pointB: NormalizedLandmark) ->
 
     p = (pointA.x, pointA.y, pointA.z)
     q = (pointB.x, pointB.y, pointB.z)
-    distance = math.dist(p,q)
+    distance = math.dist(p, q)
     return distance
 
 
-def is_eye_closed(landmarks: List[NormalizedLandmark], eye_indices: Dict[str, int] ) -> float:
+def is_eye_closed(
+    landmarks: List[NormalizedLandmark], eye_indices: Dict[str, int]
+) -> float:
     """
     Determines if an eye is closed based on the distance between the upper and lower eyelids,
     normalized by the width of the eye.
@@ -69,7 +81,6 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
         - The `is_eye_closed` function is called for each eye.
     """
 
-
     # Initialize memory attributes once
     if not hasattr(check_eyes_closed, "in_closed"):
         check_eyes_closed.in_closed = False
@@ -78,7 +89,6 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
         check_eyes_closed.was_activated = False
         check_eyes_closed.valid_closure = False
         check_eyes_closed.states_buf = {"left": [], "right": []}
-
 
     left_eye_indices = {"h1": 362, "h2": 263, "v1": 386, "v2": 374}
     right_eye_indices = {"h1": 33, "h2": 374, "v1": 159, "v2": 145}
@@ -94,9 +104,12 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
         check_eyes_closed.states_buf["right"].pop(0)
 
     # calculate averages
-    avg_left = sum(check_eyes_closed.states_buf["left"]) / len(check_eyes_closed.states_buf["left"])
-    avg_right = sum(check_eyes_closed.states_buf["right"]) / len(check_eyes_closed.states_buf["right"])
-
+    avg_left = sum(check_eyes_closed.states_buf["left"]) / len(
+        check_eyes_closed.states_buf["left"]
+    )
+    avg_right = sum(check_eyes_closed.states_buf["right"]) / len(
+        check_eyes_closed.states_buf["right"]
+    )
 
     # decide if eyes are closed and then save current time
     current_t = time.time()
@@ -104,7 +117,6 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
     eyes_closed_output = False
     eyes_failed = False
     activate = False
-
 
     # Eyes currently closed
     if avg_left < CLOSED_TRESH and avg_right < CLOSED_TRESH:
@@ -119,12 +131,16 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
         # Check if closure passed blink threshold
         if not check_eyes_closed.valid_closure:
             if current_t - check_eyes_closed.last_trigger_t >= MAX_BLINK_DURATION:
-                eyes_closed_output = True  # Only pulse once when valid closure confirmed
+                eyes_closed_output = (
+                    True  # Only pulse once when valid closure confirmed
+                )
                 check_eyes_closed.valid_closure = True
 
         # Activate if eyes have stayed closed long enough
-        if (current_t - check_eyes_closed.last_trigger_t >= CLOSED_TIME
-                and not check_eyes_closed.output_triggered):
+        if (
+            current_t - check_eyes_closed.last_trigger_t >= CLOSED_TIME
+            and not check_eyes_closed.output_triggered
+        ):
             activate = True
             check_eyes_closed.output_triggered = True
             check_eyes_closed.was_activated = True
@@ -141,7 +157,6 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
         check_eyes_closed.output_triggered = False
         check_eyes_closed.was_activated = False
         check_eyes_closed.valid_closure = False
-
 
     return eyes_closed_output, eyes_failed, activate
 
