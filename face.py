@@ -7,10 +7,14 @@ import json
 import os
 import requests
 
+# If there is no face_config.json then app shouldn't start
+# due to missing signals
 if not os.path.isfile("face_config.json"):
     print("Missing config file, download face_config.json before running")
     quit()
 
+# If there is no available model for face detection - the one on
+# google storage shall be downloaded for user
 if not os.path.isfile("face_landmarker.task"):
     file_name = "face_landmarker.task"
     url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
@@ -21,21 +25,30 @@ if not os.path.isfile("face_landmarker.task"):
         file.write(response.content)
     print("Download completed")
 
-# Reading settings
+# Reading settings from json configure file
 with open("face_config.json", "r") as file:
     face_config = json.load(file)
 
-# Networking setup for UDP
+# Networking setup for UDP connection
+# values should be provided from game config
 SERVER_IP = face_config["SERVER_IP"]
 SERVER_PORT = face_config["SERVER_PORT"]
 GROUP_ID = face_config["GROUP_ID"]
 
 # Additional visualization parameter
+# just for demonstration purpose;
+# should be set in config file to 0 while playing
+# so the resources won't be lost
 SHOW_CAMERA = face_config["SHOW_CAMERA"]
 detection_result = None
+
+# Global center variable for face movement
+# that is estimation of face center point
 center = None
 
+# Loading the model from:
 # https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/index#models
+# and configure parameters as written in google docs api
 model_path = "face_landmarker.task"
 BaseOptions = mp.tasks.BaseOptions
 FaceLandmarker = mp.tasks.vision.FaceLandmarker
@@ -65,13 +78,17 @@ def camera_callback(
 
     # in case visualization is necessary detection_result will be passed to draw_landmarks_on_image
     global detection_result
+    # global variable for face positioning
     global center
 
+    # redirecting results to global variable for visualization
     if SHOW_CAMERA:
         detection_result = result
 
+    # none avoidance for initialization of camera
     if result is None:
         return
+
     # trying to get signals and in case of unknown error display information about exception
     try:
 
@@ -96,6 +113,7 @@ def camera_callback(
                     result.face_landmarks[0], center
                 )
 
+                # mapping the signals with config file
                 signals[face_config["EYE_CHARGING"]] = just_closed
                 signals[face_config["EYE_FAILED"]] = opened_too_fast
                 signals[face_config["EYE_ACTIVATION"]] = activate_action
@@ -106,19 +124,25 @@ def camera_callback(
                 signals[face_config["IS_UP"]] = is_up
                 signals[face_config["IS_DOWN"]] = is_down
 
+                # sorting in case of reverse order in config file
                 signals = dict(sorted(signals.items()))
 
+                # creating the message for game
                 msg = f"{face_config["GROUP_ID"]}"
                 msg += "".join(str(int(value)) for value in signals.values())
+
                 # sending a boolean values to game server to handle corresponding signal
                 sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
 
             else:
+
                 if True:
                     # receiving bool value about eyes test signal
-                    just_closed, opened_too_fast, activate_action = fe.check_eyes_closed(
-                        result.face_landmarks[0]
+                    just_closed, opened_too_fast, activate_action = (
+                        fe.check_eyes_closed(result.face_landmarks[0])
                     )
+
+                    # creating the message for game
                     msg = f"({GROUP_ID})({time.time()})"
                 if just_closed:
                     msg += f"{face_config["EYE_CHARGING"]}"
@@ -139,23 +163,31 @@ def camera_callback(
                     )
 
                     if opened_mouth:
+                        # creating the message for game
                         msg = (
                             f"({GROUP_ID})({time.time()}){face_config["MOUTH_OPENED"]}"
                         )
+
                         # sending a int value to game server to handle corresponding signal
                         sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
 
                     if smile:
+                        # creating the message for game
                         msg = f"({GROUP_ID})({time.time()}){face_config["SMILE"]}"
+
                         # sending a int value to game server to handle corresponding signal
                         sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
 
                 if True:
+
                     # receiving bool value about face movement
                     (is_left, is_right, is_up, is_down), center = (
                         fe.detect_head_movement(result.face_landmarks[0], center)
                     )
+
+                    # creating the message for game
                     msg = f"({GROUP_ID})({time.time()})"
+                    
                     if is_left:
                         msg += f"{face_config["IS_LEFT"]}"
                         # sending a int value to game server to handle corresponding signal
