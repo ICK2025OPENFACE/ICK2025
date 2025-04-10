@@ -4,22 +4,6 @@ import faceexpressions as fe
 import supportfunctions as sf
 import time
 import json
-import os
-import requests
-
-if not os.path.isfile("face_config.json"):
-    print("Missing config file, download face_config.json before running")
-    quit()
-
-if not os.path.isfile("face_landmarker.task"):
-    file_name = "face_landmarker.task"
-    url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
-    print(f"Missing {file_name}; Downloading from: ")
-    print(url)
-    response = requests.get(url)
-    with open(file_name, "wb") as file:
-        file.write(response.content)
-    print("Download completed")
 
 # Reading settings
 with open("face_config.json", "r") as file:
@@ -46,6 +30,7 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 def camera_callback(
     result: FaceLandmarkerResult, output_image: mp.Image, timestamp_ms: int  # type: ignore
 ) -> None:
+    
     """
     Callback function for the MediaPipe FaceLandmarker model.
     This function processes the detected face landmarks, analyzes facial expressions,
@@ -68,77 +53,47 @@ def camera_callback(
     if SHOW_CAMERA:
         detection_result = result
 
-    if result is None:
-        return
     # trying to get signals and in case of unknown error display information about exception
     try:
 
         # if no face landmarks detected do not pass it to the function to avoid exiting app
         if result.face_landmarks and len(result.face_landmarks) > 0:
 
-            if True:
-                # receiving bool value about eyes test signal
-                test_left_eye, test_right_eye = fe.check_eyes_closed(
-                    result.face_landmarks[0]
-                )
-                msg = f"({GROUP_ID})({time.time()})"
-                if test_right_eye and test_left_eye:
-                    msg += f"{face_config["BOTH_EYES_CLOSED"]}"
-                elif test_left_eye:
-                    msg += f"{face_config["LEFT_EYE_CLOSED"]}"
-                elif test_right_eye:
-                    msg += f"{face_config["RIGHT_EYE_CLOSED"]}"
-                else:
-                    msg = None  # None - msg won't be send due to send_msg_via_udp implementation
+            # receiving bool value about eyes test signal
+            just_closed, opened_too_fast, activate_action = fe.check_eyes_closed(
+                result.face_landmarks[0]
+            )
+            msg = f"({GROUP_ID})({time.time()})"
+            if just_closed:
+                msg += f"{face_config["EYE_CHARGING"]}"
+            elif opened_too_fast:
+                msg += f"{face_config["EYE_FAILED"]}"
+            elif activate_action:
+                msg += f"{face_config["EYE_ACTIVATION"]}"
+            else:
+                msg = None  # None - msg won't be send due to send_msg_via_udp implementation
 
-                # sending a int value to game server to handle corresponding signal
+            # sending a int value to game server to handle corresponding signal
+            sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+
+            # receiving bool value about mouth
+            opened_mouth, smile = fe.detect_smile_and_open_mouth(
+                result.face_landmarks[0]
+            )
+            if opened_mouth:
+                msg = f"({GROUP_ID})({time.time()})({face_config["MOUTH_OPENED"]})"
                 sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-
-            if True:
-                # receiving bool value about mouth
-                opened_mouth, smile = fe.detect_smile_and_open_mouth(
-                    result.face_landmarks[0]
-                )
-
-                if opened_mouth:
-                    msg = f"({GROUP_ID})({time.time()}){face_config["MOUTH_OPENED"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-
-                if smile:
-                    msg = f"({GROUP_ID})({time.time()}){face_config["SMILE"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-
-            if True:
-                # receiving bool value about face movement
-                (is_left, is_right, is_up, is_down), center = fe.detect_head_movement(
-                    result.face_landmarks[0]
-                )
-
-                msg = f"({GROUP_ID})({time.time()})"
-                if is_left:
-                    msg += f"{face_config["IS_LEFT"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-                elif is_right:
-                    msg += f"{face_config["IS_RIGHT"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-                elif is_up:
-                    msg += f"{face_config["IS_UP"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
-                elif is_down:
-                    msg += f"{face_config["IS_DOWN"]}"
-                    # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+            if smile:
+                msg = f"({GROUP_ID})({time.time()})({face_config["SMILE"]})"
+                sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
 
     except Exception as e:
         print(f"Unhandled exception in camera_callback function: {e}")
 
 
+
 def camera_proc():
+    
     """
     Main script function that initializes the camera processing pipeline.
     This function sets up the camera feed, configures the FaceLandmarker model,
@@ -185,8 +140,6 @@ def camera_proc():
                 )
 
                 # displaying the script output with landmarks if SHOW_CAMERA set to true
-                if detection_result is None:
-                    continue
                 if SHOW_CAMERA:
                     cv2.imshow(
                         "Camera", sf.draw_landmarks_on_image(frame, detection_result)
