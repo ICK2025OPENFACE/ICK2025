@@ -37,7 +37,7 @@ def is_eye_closed(
     vertical_distance = abs(upper_lid.y - lower_lid.y) / face_height
 
     # Threshold for determining if the eye is closed
-    THRESHOLD_EYE_CLOSED = 0.05
+    THRESHOLD_EYE_CLOSED = 0.01
 
     return vertical_distance < THRESHOLD_EYE_CLOSED
 
