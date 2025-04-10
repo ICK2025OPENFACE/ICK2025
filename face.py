@@ -82,7 +82,7 @@ def camera_callback(
                 signals = dict()
 
                 # receiving bool value about eyes test signal
-                test_left_eye, test_right_eye = fe.check_eyes_closed(
+                just_closed, opened_too_fast, activate_action = fe.check_eyes_closed(
                     result.face_landmarks[0]
                 )
 
@@ -96,11 +96,9 @@ def camera_callback(
                     result.face_landmarks[0], center
                 )
 
-                signals[face_config["LEFT_EYE_CLOSED"]] = test_left_eye
-                signals[face_config["RIGHT_EYE_CLOSED"]] = test_right_eye
-                signals[face_config["BOTH_EYES_CLOSED"]] = (
-                    test_left_eye and test_right_eye
-                )
+                signals[face_config["EYE_CHARGING"]] = just_closed
+                signals[face_config["EYE_FAILED"]] = opened_too_fast
+                signals[face_config["EYE_ACTIVATION"]] = activate_action
                 signals[face_config["MOUTH_OPENED"]] = opened_mouth
                 signals[face_config["SMILE"]] = smile
                 signals[face_config["IS_LEFT"]] = is_left
@@ -118,18 +116,18 @@ def camera_callback(
             else:
                 if True:
                     # receiving bool value about eyes test signal
-                    test_left_eye, test_right_eye = fe.check_eyes_closed(
+                    just_closed, opened_too_fast, activate_action = fe.check_eyes_closed(
                         result.face_landmarks[0]
                     )
                     msg = f"({GROUP_ID})({time.time()})"
-                    if test_right_eye and test_left_eye:
-                        msg += f"{face_config["BOTH_EYES_CLOSED"]}"
-                    elif test_left_eye:
-                        msg += f"{face_config["LEFT_EYE_CLOSED"]}"
-                    elif test_right_eye:
-                        msg += f"{face_config["RIGHT_EYE_CLOSED"]}"
-                    else:
-                        msg = None  # None - msg won't be send due to send_msg_via_udp implementation
+                if just_closed:
+                    msg += f"{face_config["EYE_CHARGING"]}"
+                elif opened_too_fast:
+                    msg += f"{face_config["EYE_FAILED"]}"
+                elif activate_action:
+                    msg += f"{face_config["EYE_ACTIVATION"]}"
+                else:
+                    msg = None  # None - msg won't be send due to send_msg_via_udp implementation
 
                     # sending a int value to game server to handle corresponding signal
                     sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
