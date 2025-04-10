@@ -4,6 +4,22 @@ import faceexpressions as fe
 import supportfunctions as sf
 import time
 import json
+import os
+import requests
+
+if not os.path.isfile("face_config.json"):
+    print("Missing config file, download face_config.json before running")
+    quit()
+
+if not os.path.isfile("face_landmarker.task"):
+    file_name = "face_landmarker.task"
+    url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
+    print(f"Missing {file_name}; Downloading from: ")
+    print(url)
+    response = requests.get(url)
+    with open(file_name, "wb") as file:
+        file.write(response.content)
+    print("Download completed")
 
 # Reading settings
 with open("face_config.json", "r") as file:
@@ -52,6 +68,8 @@ def camera_callback(
     if SHOW_CAMERA:
         detection_result = result
 
+    if result is None:
+        return
     # trying to get signals and in case of unknown error display information about exception
     try:
 
@@ -167,6 +185,8 @@ def camera_proc():
                 )
 
                 # displaying the script output with landmarks if SHOW_CAMERA set to true
+                if detection_result is None:
+                    continue
                 if SHOW_CAMERA:
                     cv2.imshow(
                         "Camera", sf.draw_landmarks_on_image(frame, detection_result)
