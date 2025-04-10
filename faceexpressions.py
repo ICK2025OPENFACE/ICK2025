@@ -146,7 +146,6 @@ def check_eyes_closed(landmarks: List[NormalizedLandmark]) -> Tuple[bool, bool, 
     return eyes_closed_output, eyes_failed, activate
 
 
-
 def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bool]:
     """
     Detects whether the mouth is open and whether the person is smiling based on facial landmarks.
@@ -173,14 +172,14 @@ def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bo
     THRESHOLD_OPEN = 0.05
     THRESHOLD_SMILE_RATIO = 0.40
 
-    top_lip = landmarks[13]
+    top_lip = landmarks[12]
     bottom_lip = landmarks[14]
-    left_mouth = landmarks[61]
-    right_mouth = landmarks[291]
+    left_mouth = landmarks[307]
+    right_mouth = landmarks[77]
 
     # Points for face width (temples) used for scaling distances
-    left_cheek = landmarks[234]
-    right_cheek = landmarks[454]
+    left_cheek = landmarks[265]
+    right_cheek = landmarks[143]
 
     # Calculating distances
     open_dist = distance(top_lip, bottom_lip)  # Open mouth (vertical distance)
@@ -194,3 +193,47 @@ def detect_smile_and_open_mouth(landmarks: List[NormalizedLandmark]) -> Tuple[bo
     smile = smile_ratio > THRESHOLD_SMILE_RATIO
 
     return mouth_open, smile
+
+
+def detect_head_movement(landmarks, center=None):
+    """
+    Detects head movment by checking if the center of the head moves outside of a box.
+
+    Args:
+        landmarks (list): List of normalised landmarks.
+        center (tuple or None): Central position (x, y).
+
+    Returns:
+        tuple: (is_left, is_right, is_up, is_down), center
+    """
+
+    # Center of the face
+    face_x = sum([landmark.x for landmark in landmarks]) / len(landmarks)
+    face_y = sum([landmark.y for landmark in landmarks]) / len(landmarks)
+
+    # Width of the face
+    left_face_x = landmarks[234].x
+    right_face_x = landmarks[454].x
+    face_width = abs(right_face_x - left_face_x)
+
+    if center is None:
+        center = (face_x, face_y)
+
+    center_x, center_y = center
+
+    margin_x = face_width * 0.5
+    margin_y = face_width * 0.5
+
+    # Box boundries
+    left_bound = center_x - margin_x
+    right_bound = center_x + margin_x
+    top_bound = center_y - margin_y
+    bottom_bound = center_y + margin_y
+
+    # Movment detecion
+    is_left = face_x < left_bound
+    is_right = face_x > right_bound
+    is_up = face_y < top_bound
+    is_down = face_y > bottom_bound
+
+    return (is_left, is_right, is_up, is_down), center
