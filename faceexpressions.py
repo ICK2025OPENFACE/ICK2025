@@ -236,8 +236,8 @@ def detect_head_movement(landmarks, center=None):
 
     center_x, center_y = center
 
-    margin_x = face_width * 0.5
-    margin_y = face_width * 0.5
+    margin_x = face_width * 0.2
+    margin_y = face_width * 0.2
 
     # Box boundaries
     left_bound = center_x - margin_x

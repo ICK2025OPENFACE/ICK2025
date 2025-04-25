@@ -1,17 +1,17 @@
 {
-    "SERVER_IP": "127.0.0.1",
+    "SERVER_IP": "192.168.0.109",
     "SERVER_PORT": 4242,
     "SHOW_CAMERA": 1,
     "GROUP_ID": 0,
     "BOOLEAN_MSG": 1,
-    "CLOSED_EYES_TIME": 0.5,
+    "CLOSED_EYES_TIME": 1,
     "EYE_CHARGING": 1,
     "EYE_FAILED": 2,
     "EYE_ACTIVATION": 3,
     "MOUTH_OPENED": 4,
     "SMILE": 5,
-    "IS_LEFT": 6,
-    "IS_RIGHT": 7,
+    "IS_RIGHT": 6,
+    "IS_LEFT": 7,
     "IS_UP": 8,
     "IS_DOWN": 9
 }

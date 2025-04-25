@@ -6,6 +6,7 @@ import time
 import json
 import os
 import requests
+import socket
 
 # If there is no face_config.json then app shouldn't start
 # due to missing signals
@@ -34,6 +35,7 @@ with open("face_config.json", "r") as file:
 SERVER_IP = face_config["SERVER_IP"]
 SERVER_PORT = face_config["SERVER_PORT"]
 GROUP_ID = face_config["GROUP_ID"]
+udp_socket = None
 
 # Additional visualization parameter
 # just for demonstration purpose;
@@ -80,6 +82,8 @@ def camera_callback(
     global detection_result
     # global variable for face positioning
     global center
+    # global udp socket
+    global udp_socket
 
     # redirecting results to global variable for visualization
     if SHOW_CAMERA:
@@ -89,6 +93,12 @@ def camera_callback(
     if result is None:
         return
 
+    try:
+        if udp_socket == None:
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    except:
+        print("Couldn't create udp socket")
+        return
     # trying to get signals and in case of unknown error display information about exception
     try:
 
@@ -130,9 +140,9 @@ def camera_callback(
                 # creating the message for game
                 msg = f"{face_config["GROUP_ID"]}"
                 msg += "".join(str(int(value)) for value in signals.values())
-
+                print("Package:", msg)
                 # sending a boolean values to game server to handle corresponding signal
-                sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
 
             else:
 
@@ -154,7 +164,7 @@ def camera_callback(
                     msg = None  # None - msg won't be send due to send_msg_via_udp implementation
 
                     # sending a int value to game server to handle corresponding signal
-                    sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                    sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
 
                 if True:
                     # receiving bool value about mouth
@@ -169,14 +179,14 @@ def camera_callback(
                         )
 
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
 
                     if smile:
                         # creating the message for game
                         msg = f"({GROUP_ID})({time.time()}){face_config["SMILE"]}"
 
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
 
                 if True:
 
@@ -187,23 +197,23 @@ def camera_callback(
 
                     # creating the message for game
                     msg = f"({GROUP_ID})({time.time()})"
-                    
+
                     if is_left:
                         msg += f"{face_config["IS_LEFT"]}"
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
                     if is_right:
                         msg += f"{face_config["IS_RIGHT"]}"
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
                     if is_up:
                         msg += f"{face_config["IS_UP"]}"
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
                     if is_down:
                         msg += f"{face_config["IS_DOWN"]}"
                         # sending a int value to game server to handle corresponding signal
-                        sf.send_msg_via_udp(msg, SERVER_IP, SERVER_PORT)
+                        sf.send_msg_via_udp(msg, udp_socket, SERVER_IP, SERVER_PORT)
 
     except Exception as e:
         print(f"Unhandled exception in camera_callback function: {e}")
@@ -259,8 +269,10 @@ def camera_proc():
                 if detection_result is None:
                     continue
                 if SHOW_CAMERA:
+                    frame = 0 * frame
                     cv2.imshow(
-                        "Camera", sf.draw_landmarks_on_image(frame, detection_result)
+                        "Camera",
+                        sf.draw_landmarks_on_image(frame, detection_result),
                     )
                     if cv2.waitKey(1) == ord("q"):
                         break
@@ -277,3 +289,4 @@ def camera_proc():
 if __name__ == "__main__":
     # executing main function of script
     camera_proc()
+    udp_socket.close()
