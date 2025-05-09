@@ -6,6 +6,21 @@ import socket
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
+    """
+    Draws facial landmarks on an RGB image based on the detection results.
+    This function takes an input RGB image and a detection result containing
+    facial landmarks, and it visualizes the landmarks on the image. The landmarks
+    are drawn using MediaPipe's drawing utilities, including tessellation, contours,
+    and iris connections.
+    Args:
+        rgb_image (numpy.ndarray): The input RGB image on which the landmarks will be drawn.
+        detection_result: The detection result containing facial landmarks. It is expected
+                          to have a `face_landmarks` attribute, which is a list of landmarks
+                          for each detected face.
+    Returns:
+        numpy.ndarray: The annotated image with facial landmarks drawn on it.
+    """
+
     face_landmarks_list = detection_result.face_landmarks
     annotated_image = np.copy(rgb_image)
 
@@ -49,7 +64,20 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     return annotated_image
 
 
-def send_msg_via_udp(msg: str, udp_socket, server_ip: str, server_port: str) -> None:
+def send_msg_via_udp(msg: str, udp_socket:socket.socket, server_ip: str, server_port: str) -> None:
+    """
+    Sends a message via UDP to a specified server.
+    Args:
+        msg (str): The message to be sent. It will be converted to a string if not already.
+        udp_socket (socket.socket): The UDP socket object used to send the message.
+        server_ip (str): The IP address of the server to send the message to.
+        server_port (str): The port number of the server to send the message to.
+    Returns:
+        None
+    Raises:
+        Exception: Catches and prints any unhandled exceptions that occur during the sending process.
+    """
+    
     try:
         if not msg is None:
             msg = str(msg)

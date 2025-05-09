@@ -95,6 +95,7 @@ def camera_callback(
 
     try:
         if udp_socket == None:
+            # creating a socket
             udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except:
         print("Couldn't create udp socket")
@@ -289,4 +290,5 @@ def camera_proc():
 if __name__ == "__main__":
     # executing main function of script
     camera_proc()
+    # closing socket at the end of program
     udp_socket.close()
